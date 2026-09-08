@@ -8,6 +8,15 @@ Sync is handled thorugh Actual's own engine, the tool embeds `@actual-app/api`, 
 
 Full disclosure: This tool was primarily implemented with the help of agentic coding tools. I'm sorry if that's a problem for you, but this exists to scratch a personal itch and wouldn't exist otherwise. This readme is of course written by a human, slop docs aren't fun to read.
 
+## Usage
+
+The status line at the bottom shows available keybindings, press `?` to show a detailed listing.
+
+While filtering with `/`, `Enter` keeps the filter and returns to the list. `Esc` clears the filter and `/` refocuses it. While a filter is active, the account balance shows the sum of the filter results.
+
+In the transaction form, `Tab` and `Shift+Tab` move between fields, arrow keys move through payee and category suggestions, `Enter` accepts a field and saves on the last one. `Ctrl+S` saves at any point and `Esc` cancels.
+Typing a payee that does not yet exist creates it. A category must already exist.
+
 ## Setup & Development
 
 Requires Node 22 or newer and pnpm. The nix flake provides a dev shell with those.
@@ -53,15 +62,6 @@ Existing options:
 - `syncId`/`ACTUAL_SYNC_ID` - Required
 - `dataDir`/`ACTUAL_DATA_DIR` - Local budget cache, defaults to `~/.local/share/actual-tui`
 - `encryptionPassword`/`ACTUAL_ENCRYPTION_PASSWORD` - only necessary if encryption is enabled
-
-## Usage
-
-The status line at the bottom shows available keybindings, press `?` to show a detailed listing.
-
-While filtering with `/`, `Enter` keeps the filter and returns to the list. `Esc` clears the filter and `/` refocuses it. While a filter is active, the account balance shows the sum of the filter results.
-
-In the transaction form, `Tab` and `Shift+Tab` move between fields, arrow keys move through payee and category suggestions, `Enter` accepts a field and saves on the last one. `Ctrl+S` saves at any point and `Esc` cancels.
-Typing a payee that does not yet exist creates it. A category must already exist.
 
 ## Features that don't exist yet
 
