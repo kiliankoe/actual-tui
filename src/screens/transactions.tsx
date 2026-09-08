@@ -113,12 +113,28 @@ export function TransactionsScreen({
   );
   const selected = rows[selectedIndex];
 
-  const filteredSum = rows.reduce((sum, t) => sum + t.amount, 0);
+  // Top-level rows carry a split's full amount, so summing them is exact.
+  const sumOf = (list: Transaction[]) =>
+    list.reduce((sum, t) => sum + t.amount, 0);
+  const filteredSum = sumOf(rows);
+  const balance = sumOf(transactions ?? []);
+  const clearedBalance = sumOf(
+    (transactions ?? []).filter((t) => t.cleared || t.reconciled),
+  );
   useEffect(() => {
-    onHeaderInfo(
-      filter ? `Σ ${formatAmount(filteredSum, budget.format)}` : null,
-    );
-  }, [filter, filteredSum, budget.format, onHeaderInfo]);
+    const money = (cents: number) => formatAmount(cents, budget.format);
+    if (transactions === null) onHeaderInfo(null);
+    else if (filter) onHeaderInfo(`Σ ${money(filteredSum)}`);
+    else onHeaderInfo(`Cleared ${money(clearedBalance)} (${money(balance)})`);
+  }, [
+    transactions,
+    filter,
+    filteredSum,
+    balance,
+    clearedBalance,
+    budget.format,
+    onHeaderInfo,
+  ]);
   useEffect(() => () => onHeaderInfo(null), [onHeaderInfo]);
 
   // Functional update so bursts of key repeats each move one step.
