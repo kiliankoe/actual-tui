@@ -1,7 +1,7 @@
 {
   "name": "actual-tui",
   "version": "1.0.0",
-  "description": "",
+  "description": "Terminal UI for Actual Budget",
   "scripts": {
     "dev": "tsx src/index.tsx",
     "typecheck": "tsc --noEmit",
@@ -24,6 +24,7 @@
     "react": "^19.2.8"
   },
   "devDependencies": {
+    "@types/node": "^26.4.1",
     "@types/react": "^19.2.18",
     "ink-testing-library": "^4.0.0",
     "tsx": "^4.23.13",
