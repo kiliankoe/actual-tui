@@ -106,7 +106,31 @@ export async function addTransaction(
   );
 }
 
+export async function editTransaction(
+  transactionId: string,
+  transaction: NewTransaction,
+): Promise<void> {
+  // Unlike addTransactions, updates take a payee id only, so a new name needs
+  // a payee record first.
+  let payee = transaction.payeeId ?? null;
+  if (!payee && transaction.payeeName) {
+    payee = await api.createPayee({ name: transaction.payeeName });
+  }
+  const fields: Record<string, unknown> = {
+    date: transaction.date,
+    amount: transaction.amount,
+    payee,
+    // The engine needs an explicit null to clear a category; the type only
+    // admits strings.
+    category: transaction.categoryId ?? null,
+    notes: transaction.notes ?? "",
+    cleared: transaction.cleared,
+  };
+  await api.updateTransaction(transactionId, fields as Partial<Transaction>);
+}
+
 export {
+  deleteTransaction,
   getCategories,
   getCategoryGroups,
   getPayees,

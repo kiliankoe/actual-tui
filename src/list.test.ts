@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { filterByQuery, visibleRange } from "./list";
+import { filterByQuery, matchesQuery, visibleRange } from "./list";
 
 describe("visibleRange", () => {
   it("shows everything when it fits", () => {
@@ -43,5 +43,22 @@ describe("filterByQuery", () => {
       "Store",
       "Restaurants",
     ]);
+  });
+});
+
+describe("matchesQuery", () => {
+  const row = "2026-09-05 Edeka Groceries weekly shop -62.57";
+
+  it("matches when every term appears, ignoring case", () => {
+    expect(matchesQuery(row, "edeka gro")).toBe(true);
+    expect(matchesQuery(row, "62.57")).toBe(true);
+  });
+
+  it("fails when any term is missing", () => {
+    expect(matchesQuery(row, "edeka rent")).toBe(false);
+  });
+
+  it("matches everything for an empty query", () => {
+    expect(matchesQuery(row, "   ")).toBe(true);
   });
 });

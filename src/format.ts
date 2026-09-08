@@ -71,3 +71,16 @@ export function todayISO(): string {
   const day = String(now.getDate()).padStart(2, "0");
   return `${now.getFullYear()}-${month}-${day}`;
 }
+
+/** Digits only, with the format's decimal separator, for prefilling an input. */
+export function formatAmountForInput(
+  cents: number,
+  format: Partial<AmountFormat> = {},
+): string {
+  const { numberFormat } = { ...DEFAULT_AMOUNT_FORMAT, ...format };
+  const absolute = Math.abs(cents);
+  const whole = Math.floor(absolute / 100);
+  const fraction = String(absolute % 100).padStart(2, "0");
+  const sign = cents < 0 ? "-" : "";
+  return `${sign}${whole}${SEPARATORS[numberFormat].decimal}${fraction}`;
+}

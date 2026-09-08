@@ -1,9 +1,15 @@
 import { Box, Text, useInput } from "ink";
-import { useEffect, useState } from "react";
-import { getAllTransactions, setCleared, type Transaction } from "../actual";
+import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
+import {
+  deleteTransaction,
+  getAllTransactions,
+  setCleared,
+  type Transaction,
+} from "../actual";
 import { useBudget } from "../budget-context";
+import { FilterLine } from "../components/filter-line";
 import { formatAmount } from "../format";
-import { visibleRange } from "../list";
+import { matchesQuery, visibleRange } from "../list";
 import { fit } from "../text";
 
 interface Props {
@@ -11,8 +17,19 @@ interface Props {
   width: number;
   height: number;
   isActive: boolean;
+  /** Owned by the shell so the selection survives a trip through the form. */
+  selectedId: string | null;
+  onSelect: Dispatch<SetStateAction<string | null>>;
+  /** Also shell-owned, so a search survives editing one of its results. */
+  filter: string;
+  onFilterChange: (filter: string) => void;
+  /** Text for the header's right corner, e.g. the sum of filtered rows. */
+  onHeaderInfo: (info: string | null) => void;
   onBack: () => void;
   onAdd: () => void;
+  onEdit: (transaction: Transaction) => void;
+  /** Reports when this screen needs every key for itself (filter, prompts). */
+  onExclusiveInput: (exclusive: boolean) => void;
 }
 
 const DATE_WIDTH = 10;
@@ -50,12 +67,20 @@ export function TransactionsScreen({
   width,
   height,
   isActive,
+  selectedId,
+  onSelect,
+  filter,
+  onFilterChange,
+  onHeaderInfo,
   onBack,
   onAdd,
+  onEdit,
+  onExclusiveInput,
 }: Props) {
   const budget = useBudget();
   const [transactions, setTransactions] = useState<Transaction[] | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [filtering, setFiltering] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -67,17 +92,38 @@ export function TransactionsScreen({
     };
   }, [accountId, budget.version]);
 
-  const rows = transactions ?? [];
+  useEffect(() => {
+    onExclusiveInput(filtering || confirmingDelete);
+    return () => onExclusiveInput(false);
+  }, [filtering, confirmingDelete, onExclusiveInput]);
+
+  const describe = (transaction: Transaction) =>
+    `${transaction.date} ${budget.payeeName(transaction.payee)} ${
+      transaction.is_parent
+        ? "Split"
+        : budget.categoryName(transaction.category)
+    } ${transaction.notes ?? ""} ${formatAmount(transaction.amount, budget.format)}`;
+
+  const rows = (transactions ?? []).filter((transaction) =>
+    matchesQuery(describe(transaction), filter),
+  );
   const selectedIndex = Math.max(
     0,
     rows.findIndex((t) => t.id === selectedId),
   );
   const selected = rows[selectedIndex];
-  const listHeight = Math.max(1, height - 1);
+
+  const filteredSum = rows.reduce((sum, t) => sum + t.amount, 0);
+  useEffect(() => {
+    onHeaderInfo(
+      filter ? `Σ ${formatAmount(filteredSum, budget.format)}` : null,
+    );
+  }, [filter, filteredSum, budget.format, onHeaderInfo]);
+  useEffect(() => () => onHeaderInfo(null), [onHeaderInfo]);
 
   // Functional update so bursts of key repeats each move one step.
   const move = (delta: number) =>
-    setSelectedId((current) => {
+    onSelect((current) => {
       const index = Math.max(
         0,
         rows.findIndex((t) => t.id === current),
@@ -95,26 +141,78 @@ export function TransactionsScreen({
     await budget.mutate(() => setCleared(selected.id, !selected.cleared));
   };
 
+  const edit = () => {
+    if (!selected) return;
+    if (selected.reconciled)
+      return budget.notify("Reconciled transactions are locked");
+    if (selected.is_parent)
+      return budget.notify("Split transactions can't be edited here");
+    onEdit(selected);
+  };
+
+  const remove = async () => {
+    if (!selected) return;
+    setConfirmingDelete(false);
+    // Land on a neighbour instead of jumping back to the top.
+    const neighbour = rows[selectedIndex + 1] ?? rows[selectedIndex - 1];
+    onSelect(neighbour?.id ?? null);
+    await budget.mutate(() => deleteTransaction(selected.id));
+    budget.notify("Transaction deleted");
+  };
+
+  const showFilter = filtering || filter !== "";
+  const listHeight = Math.max(
+    1,
+    height - 1 - (showFilter ? 1 : 0) - (confirmingDelete ? 1 : 0),
+  );
+
   useInput(
     (input, key) => {
-      if (key.escape || key.leftArrow || key.backspace || key.delete)
-        return onBack();
+      if (key.escape) return filter ? onFilterChange("") : onBack();
+      if (key.leftArrow || key.backspace || key.delete) return onBack();
       if (key.downArrow) return move(1);
       if (key.upArrow) return move(-1);
       if (key.pageDown) return move(listHeight);
       if (key.pageUp) return move(-listHeight);
       // Fast typing or key repeat can deliver several characters at once.
       for (const char of input) {
-        if (char === "h") onBack();
+        if (char === "/") setFiltering(true);
+        else if (char === "h") onBack();
         else if (char === "j") move(1);
         else if (char === "k") move(-1);
         else if (char === "g") move(-rows.length);
         else if (char === "G") move(rows.length);
         else if (char === "a") onAdd();
         else if (char === "c") void toggleCleared();
+        else if (char === "e") edit();
+        else if (char === "d" && selected) setConfirmingDelete(true);
       }
     },
-    { isActive },
+    { isActive: isActive && !filtering && !confirmingDelete },
+  );
+
+  useInput(
+    (_input, key) => {
+      if (key.escape) {
+        onFilterChange("");
+        setFiltering(false);
+      } else if (key.return) {
+        setFiltering(false);
+      } else if (key.downArrow) {
+        move(1);
+      } else if (key.upArrow) {
+        move(-1);
+      }
+    },
+    { isActive: isActive && filtering },
+  );
+
+  useInput(
+    (input) => {
+      if (input === "y") void remove();
+      else setConfirmingDelete(false);
+    },
+    { isActive: isActive && confirmingDelete },
   );
 
   const columns = columnWidths(width);
@@ -124,22 +222,31 @@ export function TransactionsScreen({
     height: listHeight,
   });
 
-  const header = (
-    <Text bold underline wrap="truncate">
-      {fit("Date", DATE_WIDTH)} {fit("Payee", columns.payee)}{" "}
-      {fit("Category", columns.category)}
-      {columns.notes > 0 ? ` ${fit("Notes", columns.notes)}` : ""}{" "}
-      {fit("Amount", AMOUNT_WIDTH, "right")} {fit("", MARK_WIDTH)}
-    </Text>
-  );
-
   return (
     <Box flexDirection="column" paddingX={1}>
-      {header}
+      <Text bold underline wrap="truncate">
+        {fit("Date", DATE_WIDTH)} {fit("Payee", columns.payee)}{" "}
+        {fit("Category", columns.category)}
+        {columns.notes > 0 ? ` ${fit("Notes", columns.notes)}` : ""}{" "}
+        {fit("Amount", AMOUNT_WIDTH, "right")} {fit("", MARK_WIDTH)}
+      </Text>
+      {showFilter && (
+        <FilterLine
+          value={filter}
+          onChange={onFilterChange}
+          isActive={isActive && filtering}
+          matches={rows.length}
+          total={transactions?.length ?? 0}
+        />
+      )}
       {transactions === null ? (
         <Text dimColor>Loading…</Text>
       ) : rows.length === 0 ? (
-        <Text dimColor>No transactions yet. Press a to add one.</Text>
+        <Text dimColor>
+          {transactions.length === 0
+            ? "No transactions yet. Press a to add one."
+            : "No transactions match the filter."}
+        </Text>
       ) : (
         rows.slice(start, end).map((transaction) => (
           <Text
@@ -168,6 +275,12 @@ export function TransactionsScreen({
             <ClearedMark transaction={transaction} />
           </Text>
         ))
+      )}
+      {confirmingDelete && selected && (
+        <Text color="yellow" wrap="truncate">
+          Delete {selected.date} {budget.payeeName(selected.payee)}{" "}
+          {formatAmount(selected.amount, budget.format)}? <Text bold>y</Text>/N
+        </Text>
       )}
     </Box>
   );

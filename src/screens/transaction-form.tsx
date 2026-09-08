@@ -1,13 +1,20 @@
 import { Box, Text, useInput } from "ink";
 import { useState } from "react";
-import { addTransaction, type Payee } from "../actual";
+import {
+  addTransaction,
+  editTransaction,
+  type Payee,
+  type Transaction,
+} from "../actual";
 import { useBudget, type CategoryOption } from "../budget-context";
-import { parseAmount, todayISO } from "../format";
 import { Picker } from "../components/picker";
 import { TextInput } from "../components/text-input";
+import { formatAmountForInput, parseAmount, todayISO } from "../format";
 
 interface Props {
   accountId: string;
+  /** When set, the form edits this transaction instead of creating one. */
+  initial?: Transaction;
   isActive: boolean;
   onDone: () => void;
   onCancel: () => void;
@@ -43,8 +50,9 @@ function payeeLabel(payee: Payee): string {
   return payee.name;
 }
 
-export function AddTransactionScreen({
+export function TransactionFormScreen({
   accountId,
+  initial,
   isActive,
   onDone,
   onCancel,
@@ -52,13 +60,21 @@ export function AddTransactionScreen({
   const budget = useBudget();
   const account = budget.accounts.find((a) => a.id === accountId);
   const [field, setField] = useState<Field>("date");
-  const [date, setDate] = useState(todayISO());
-  const [payee, setPayee] = useState("");
-  const [category, setCategory] = useState("");
-  const [amount, setAmount] = useState("");
-  const [kind, setKind] = useState<Kind>("payment");
-  const [notes, setNotes] = useState("");
-  const [cleared, setCleared] = useState(false);
+  const [date, setDate] = useState(initial?.date ?? todayISO());
+  const [payee, setPayee] = useState(budget.payeeName(initial?.payee));
+  const [category, setCategory] = useState(
+    budget.categoryName(initial?.category),
+  );
+  const [amount, setAmount] = useState(
+    initial
+      ? formatAmountForInput(Math.abs(initial.amount), budget.format)
+      : "",
+  );
+  const [kind, setKind] = useState<Kind>(
+    initial && initial.amount > 0 ? "deposit" : "payment",
+  );
+  const [notes, setNotes] = useState(initial?.notes ?? "");
+  const [cleared, setCleared] = useState(initial?.cleared ?? false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -82,21 +98,25 @@ export function AddTransactionScreen({
     if (category.trim() !== "" && !categoryMatch)
       return setError(`Unknown category "${category}"`);
 
+    const transaction = {
+      date,
+      amount: kind === "payment" ? -Math.abs(cents) : Math.abs(cents),
+      payeeId: payeeMatch?.id,
+      payeeName: payeeMatch ? undefined : payee.trim() || undefined,
+      categoryId: categoryMatch?.id,
+      notes: notes.trim() || undefined,
+      cleared,
+    };
+
     setSaving(true);
     setError(null);
     try {
       await budget.mutate(() =>
-        addTransaction(accountId, {
-          date,
-          amount: kind === "payment" ? -Math.abs(cents) : Math.abs(cents),
-          payeeId: payeeMatch?.id,
-          payeeName: payeeMatch ? undefined : payee.trim() || undefined,
-          categoryId: categoryMatch?.id,
-          notes: notes.trim() || undefined,
-          cleared,
-        }),
+        initial
+          ? editTransaction(initial.id, transaction)
+          : addTransaction(accountId, transaction),
       );
-      budget.notify("Transaction added");
+      budget.notify(initial ? "Transaction updated" : "Transaction added");
       onDone();
     } catch (failure) {
       setSaving(false);
@@ -137,7 +157,9 @@ export function AddTransactionScreen({
 
   return (
     <Box flexDirection="column" paddingX={1}>
-      <Text bold>New transaction in {account?.name ?? "account"}</Text>
+      <Text bold>
+        {initial ? "Edit" : "New"} transaction in {account?.name ?? "account"}
+      </Text>
       <Box marginTop={1}>
         {label("date", "Date")}
         <TextInput

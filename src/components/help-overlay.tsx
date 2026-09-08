@@ -15,8 +15,9 @@ const SECTIONS: { title: string; keys: [string, string][] }[] = [
       ["j / k, ↑ / ↓", "move selection"],
       ["g / G", "jump to top / bottom"],
       ["PgUp / PgDn", "move a page"],
-      ["Enter", "open account"],
-      ["Esc, h, ←", "back"],
+      ["/", "filter the list as you type"],
+      ["Enter, Space", "open account"],
+      ["Esc, h, ←", "back (Esc clears a filter first)"],
     ],
   },
   {
@@ -24,10 +25,12 @@ const SECTIONS: { title: string; keys: [string, string][] }[] = [
     keys: [
       ["c", "toggle cleared"],
       ["a", "add transaction"],
+      ["e", "edit transaction"],
+      ["d", "delete transaction (asks y/N)"],
     ],
   },
   {
-    title: "Add transaction",
+    title: "Add / edit transaction",
     keys: [
       ["Tab / Shift+Tab", "next / previous field"],
       ["↑ / ↓", "move through suggestions"],

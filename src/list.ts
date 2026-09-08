@@ -31,3 +31,13 @@ export function filterByQuery<T>(
   }
   return [...prefix, ...rest];
 }
+
+/** True when every whitespace-separated term of `query` occurs in `haystack`. */
+export function matchesQuery(haystack: string, query: string): boolean {
+  const text = haystack.toLowerCase();
+  return query
+    .toLowerCase()
+    .split(/\s+/)
+    .filter((term) => term !== "")
+    .every((term) => text.includes(term));
+}

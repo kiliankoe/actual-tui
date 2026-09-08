@@ -1,23 +1,24 @@
 import { Box, Text, useApp, useInput } from "ink";
 import { useState } from "react";
+import type { Transaction } from "./actual";
 import { BudgetProvider, useBudget } from "./budget-context";
 import { HelpOverlay } from "./components/help-overlay";
 import { StatusBar } from "./components/status-bar";
 import type { Config } from "./config";
 import { useTerminalSize } from "./hooks";
 import { AccountsScreen } from "./screens/accounts";
-import { AddTransactionScreen } from "./screens/add-transaction";
+import { TransactionFormScreen } from "./screens/transaction-form";
 import { TransactionsScreen } from "./screens/transactions";
 
 type Screen =
   | { name: "accounts" }
   | { name: "transactions"; accountId: string }
-  | { name: "add"; accountId: string };
+  | { name: "form"; accountId: string; transaction?: Transaction };
 
 const HINTS: Record<Screen["name"], string> = {
-  accounts: "↑↓ move · Enter open · a add · s sync · ? help · q quit",
-  transactions: "↑↓ move · c cleared · a add · Esc back · s sync · ? help",
-  add: "Tab next · Enter accept · Ctrl+S save · Esc cancel",
+  accounts: "Enter open · / filter · a add · s sync · ? help · q quit",
+  transactions: "/ filter · c cleared · a add · e edit · d delete · ? help",
+  form: "Tab next · Enter accept · Ctrl+S save · Esc cancel",
 };
 
 export function App({ config }: { config: Config }) {
@@ -35,8 +36,14 @@ function Shell({ config }: { config: Config }) {
   const budget = useBudget();
   const [screen, setScreen] = useState<Screen>({ name: "accounts" });
   const [showHelp, setShowHelp] = useState(false);
+  const [exclusiveInput, setExclusiveInput] = useState(false);
+  const [selectedTransactionId, setSelectedTransactionId] = useState<
+    string | null
+  >(null);
+  const [accountFilter, setAccountFilter] = useState("");
+  const [transactionFilter, setTransactionFilter] = useState("");
+  const [headerInfo, setHeaderInfo] = useState<string | null>(null);
 
-  const inForm = screen.name === "add";
   useInput(
     (input) => {
       if (showHelp) setShowHelp(false);
@@ -44,7 +51,7 @@ function Shell({ config }: { config: Config }) {
       else if (input === "s") void budget.syncNow();
       else if (input === "?") setShowHelp(true);
     },
-    { isActive: !inForm },
+    { isActive: screen.name !== "form" && !exclusiveInput },
   );
 
   // Header and status bar take one line each; screens window the rest.
@@ -52,6 +59,11 @@ function Shell({ config }: { config: Config }) {
   const screensActive = budget.ready && !showHelp;
   const accountName = (id: string) =>
     budget.accounts.find((a) => a.id === id)?.name ?? "";
+  const openAccount = (accountId: string) => {
+    setSelectedTransactionId(null);
+    setTransactionFilter("");
+    setScreen({ name: "transactions", accountId });
+  };
 
   let breadcrumb = "Accounts";
   let body;
@@ -69,8 +81,12 @@ function Shell({ config }: { config: Config }) {
         width={columns}
         height={bodyHeight}
         isActive={screensActive}
-        onOpen={(accountId) => setScreen({ name: "transactions", accountId })}
-        onAdd={(accountId) => setScreen({ name: "add", accountId })}
+        onOpen={openAccount}
+        onAdd={(accountId) => setScreen({ name: "form", accountId })}
+        filter={accountFilter}
+        onFilterChange={setAccountFilter}
+        onHeaderInfo={setHeaderInfo}
+        onExclusiveInput={setExclusiveInput}
       />
     );
   } else if (screen.name === "transactions") {
@@ -82,31 +98,48 @@ function Shell({ config }: { config: Config }) {
         width={columns}
         height={bodyHeight}
         isActive={screensActive}
+        selectedId={selectedTransactionId}
+        onSelect={setSelectedTransactionId}
+        filter={transactionFilter}
+        onFilterChange={setTransactionFilter}
+        onHeaderInfo={setHeaderInfo}
         onBack={() => setScreen({ name: "accounts" })}
-        onAdd={() => setScreen({ name: "add", accountId })}
+        onAdd={() => setScreen({ name: "form", accountId })}
+        onEdit={(transaction) =>
+          setScreen({ name: "form", accountId, transaction })
+        }
+        onExclusiveInput={setExclusiveInput}
       />
     );
   } else {
-    breadcrumb = `Accounts › ${accountName(screen.accountId)} › New transaction`;
     const accountId = screen.accountId;
+    breadcrumb = `Accounts › ${accountName(accountId)} › ${
+      screen.transaction ? "Edit transaction" : "New transaction"
+    }`;
+    const back = () => setScreen({ name: "transactions", accountId });
     body = (
-      <AddTransactionScreen
+      <TransactionFormScreen
+        key={screen.transaction?.id ?? "new"}
         accountId={accountId}
+        initial={screen.transaction}
         isActive={screensActive}
-        onDone={() => setScreen({ name: "transactions", accountId })}
-        onCancel={() => setScreen({ name: "transactions", accountId })}
+        onDone={back}
+        onCancel={back}
       />
     );
   }
 
   return (
     <Box flexDirection="column" width={columns} height={rows}>
-      <Box paddingX={1}>
-        <Text bold color="magenta">
-          actual-tui
+      <Box paddingX={1} justifyContent="space-between">
+        <Text wrap="truncate">
+          <Text bold color="magenta">
+            actual-tui
+          </Text>
+          <Text dimColor> · </Text>
+          {breadcrumb}
         </Text>
-        <Text dimColor> · </Text>
-        <Text>{breadcrumb}</Text>
+        {headerInfo && <Text color="yellow">{headerInfo}</Text>}
       </Box>
       <Box flexDirection="column" flexGrow={1}>
         {body}

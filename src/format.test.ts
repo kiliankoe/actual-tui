@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { formatAmount, parseAmount, todayISO } from "./format";
+import {
+  formatAmount,
+  formatAmountForInput,
+  parseAmount,
+  todayISO,
+} from "./format";
 
 describe("formatAmount", () => {
   it("formats integer cents with two decimals by default", () => {
@@ -55,5 +60,19 @@ describe("parseAmount", () => {
 describe("todayISO", () => {
   it("returns a YYYY-MM-DD date", () => {
     expect(todayISO()).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+});
+
+describe("formatAmountForInput", () => {
+  it("uses plain digits with the format's decimal separator", () => {
+    expect(formatAmountForInput(123456)).toBe("1234.56");
+    expect(formatAmountForInput(123456, { numberFormat: "dot-comma" })).toBe(
+      "1234,56",
+    );
+    expect(formatAmountForInput(-5)).toBe("-0.05");
+  });
+
+  it("round-trips through parseAmount", () => {
+    expect(parseAmount(formatAmountForInput(987654))).toBe(987654);
   });
 });

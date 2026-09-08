@@ -41,7 +41,7 @@ export interface Budget {
   refresh: () => Promise<void>;
   syncNow: () => Promise<void>;
   /** Runs a local change, refreshes, then pushes to the server in the background. */
-  mutate: (change: () => Promise<void>) => Promise<void>;
+  mutate: (change: () => Promise<unknown>) => Promise<void>;
   payeeName: (id: string | null | undefined) => string;
   categoryName: (id: string | null | undefined) => string;
 }
@@ -121,7 +121,7 @@ export function BudgetProvider({ config, onFatal, children }: ProviderProps) {
   }, [refresh]);
 
   const mutate = useCallback(
-    async (change: () => Promise<void>) => {
+    async (change: () => Promise<unknown>) => {
       await change();
       await refresh();
       void syncNow();

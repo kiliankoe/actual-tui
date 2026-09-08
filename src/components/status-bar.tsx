@@ -21,7 +21,9 @@ export function StatusBar({ hints }: { hints: string }) {
       {message ? (
         <Text color="cyan">{message}</Text>
       ) : (
-        <Text dimColor>{hints}</Text>
+        <Text dimColor wrap="truncate">
+          {hints}
+        </Text>
       )}
       <Text color={status.color}>{status.text}</Text>
     </Box>
