@@ -1,17 +1,33 @@
-/** Slice of a list that fits into `height` rows while keeping `selected` visible. */
+/** Rows kept visible beyond the cursor before the window starts scrolling. */
+const SCROLL_MARGIN = 3;
+
+/**
+ * Slice of a list that fits into `height` rows, scrolled just far enough to keep
+ * `selected` at least `SCROLL_MARGIN` rows away from either edge. Pass the previous
+ * `start` back in so the cursor can move inside a stationary window; deriving the
+ * window from `selected` alone would pin the cursor to whichever edge it last hit.
+ */
 export function visibleRange({
   total,
   selected,
   height,
+  start = 0,
 }: {
   total: number;
   selected: number;
   height: number;
+  start?: number;
 }): { start: number; end: number } {
   if (total === 0 || height <= 0) return { start: 0, end: 0 };
   const maxStart = Math.max(0, total - height);
-  const start = Math.min(Math.max(0, selected - height + 1), maxStart);
-  return { start, end: Math.min(total, start + height) };
+  // A short window cannot honour the full margin on both sides of the cursor.
+  const margin = Math.min(SCROLL_MARGIN, Math.floor((height - 1) / 2));
+  let next = Math.min(Math.max(0, start), maxStart);
+  if (selected < next + margin) next = selected - margin;
+  else if (selected > next + height - 1 - margin)
+    next = selected - height + 1 + margin;
+  next = Math.min(Math.max(0, next), maxStart);
+  return { start: next, end: Math.min(total, next + height) };
 }
 
 /** Case-insensitive substring filter that ranks prefix matches first. */

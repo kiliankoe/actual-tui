@@ -9,18 +9,46 @@ describe("visibleRange", () => {
     });
   });
 
-  it("keeps the selection inside the window when scrolling down", () => {
-    expect(visibleRange({ total: 20, selected: 12, height: 5 })).toEqual({
-      start: 8,
-      end: 13,
-    });
+  it("leaves the window alone while the cursor stays clear of both edges", () => {
+    expect(
+      visibleRange({ total: 100, selected: 45, height: 20, start: 30 }),
+    ).toEqual({ start: 30, end: 50 });
   });
 
-  it("does not scroll past the end", () => {
-    expect(visibleRange({ total: 20, selected: 19, height: 5 })).toEqual({
-      start: 15,
-      end: 20,
-    });
+  it("scrolls down once the cursor comes within the margin of the bottom", () => {
+    expect(
+      visibleRange({ total: 100, selected: 47, height: 20, start: 30 }),
+    ).toEqual({ start: 31, end: 51 });
+  });
+
+  it("scrolls up once the cursor comes within the margin of the top", () => {
+    expect(
+      visibleRange({ total: 100, selected: 32, height: 20, start: 30 }),
+    ).toEqual({ start: 29, end: 49 });
+  });
+
+  it("lets the cursor reach the first row", () => {
+    expect(
+      visibleRange({ total: 100, selected: 0, height: 20, start: 5 }),
+    ).toEqual({ start: 0, end: 20 });
+  });
+
+  it("lets the cursor reach the last row", () => {
+    expect(
+      visibleRange({ total: 20, selected: 19, height: 5, start: 13 }),
+    ).toEqual({ start: 15, end: 20 });
+  });
+
+  it("shrinks the margin when the window is too short for it", () => {
+    expect(
+      visibleRange({ total: 50, selected: 3, height: 5, start: 0 }),
+    ).toEqual({ start: 1, end: 6 });
+  });
+
+  it("pulls a stale offset back when the list shrinks", () => {
+    expect(
+      visibleRange({ total: 5, selected: 0, height: 20, start: 40 }),
+    ).toEqual({ start: 0, end: 5 });
   });
 
   it("handles an empty list", () => {

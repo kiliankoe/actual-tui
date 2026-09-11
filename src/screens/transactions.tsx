@@ -9,7 +9,8 @@ import {
 import { useBudget } from "../budget-context";
 import { FilterLine } from "../components/filter-line";
 import { formatAmount } from "../format";
-import { matchesQuery, visibleRange } from "../list";
+import { useVisibleRange } from "../hooks";
+import { matchesQuery } from "../list";
 import { fit } from "../text";
 
 interface Props {
@@ -232,7 +233,7 @@ export function TransactionsScreen({
   );
 
   const columns = columnWidths(width);
-  const { start, end } = visibleRange({
+  const { start, end } = useVisibleRange({
     total: rows.length,
     selected: selectedIndex,
     height: listHeight,

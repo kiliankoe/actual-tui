@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 import { useBudget, type AccountRow } from "../budget-context";
 import { FilterLine } from "../components/filter-line";
 import { formatAmount } from "../format";
-import { matchesQuery, visibleRange } from "../list";
+import { useVisibleRange } from "../hooks";
+import { matchesQuery } from "../list";
 import { fit } from "../text";
 
 type Row =
@@ -134,7 +135,7 @@ export function AccountsScreen({
   const selectedRow = rows.findIndex(
     (row) => row.kind === "account" && row.account.id === selected,
   );
-  const { start, end } = visibleRange({
+  const { start, end } = useVisibleRange({
     total: rows.length,
     selected: selectedRow,
     height: listHeight,
