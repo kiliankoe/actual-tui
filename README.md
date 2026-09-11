@@ -8,6 +8,22 @@ Sync is handled thorugh Actual's own engine, the tool embeds `@actual-app/api`, 
 
 Full disclosure: This tool was primarily implemented with the help of agentic coding tools. I'm sorry if that's a problem for you, but this exists to scratch a personal itch and wouldn't exist otherwise. This readme is of course written by a human, slop docs aren't fun to read.
 
+## Installation
+
+The binary is called `actual`. With nix, run it straight from the flake or add `packages.default` to your own configuration:
+
+```sh
+nix run github:kiliankoe/actual-tui
+```
+
+Without nix, build it and link the binary into your PATH:
+
+```sh
+pnpm install
+pnpm build
+pnpm link --global
+```
+
 ## Usage
 
 The status line at the bottom shows available keybindings, press `?` to show a detailed listing.
@@ -37,7 +53,7 @@ export ACTUAL_PASSWORD=...
 pnpm dev
 ```
 
-Please make sure `pnpm test` and `pnpm typecheck` pass.
+Please make sure `pnpm test` and `pnpm typecheck` pass. `pnpm build` bundles `src` into `dist/index.js`, which is what the `actual` binary and the nix package both run.
 
 To try the app without touching a real budget, run a throwaway sync server and seed it with a demo budget:
 

@@ -2,7 +2,14 @@
   "name": "actual-tui",
   "version": "1.0.0",
   "description": "Terminal UI for Actual Budget",
+  "bin": {
+    "actual": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
   "scripts": {
+    "build": "esbuild src/index.tsx --bundle --platform=node --format=esm --target=node22 --packages=external --outfile=dist/index.js --banner:js='#!/usr/bin/env node' && chmod +x dist/index.js",
     "dev": "tsx src/index.tsx",
     "typecheck": "tsc --noEmit",
     "test": "vitest"
@@ -26,6 +33,7 @@
   "devDependencies": {
     "@types/node": "^26.4.1",
     "@types/react": "^19.2.18",
+    "esbuild": "^0.28.2",
     "ink-testing-library": "^4.0.0",
     "tsx": "^4.23.13",
     "typescript": "^7.0.2",

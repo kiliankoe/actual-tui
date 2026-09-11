@@ -14,6 +14,16 @@
       ];
     in
     {
+      packages = forAllSystems (
+        system:
+        let
+          pkgs = nixpkgs.legacyPackages.${system};
+        in
+        {
+          default = pkgs.callPackage ./package.nix { };
+        }
+      );
+
       devShells = forAllSystems (
         system:
         let
