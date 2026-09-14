@@ -24,6 +24,8 @@ pnpm build
 pnpm link --global
 ```
 
+The tool embeds Actual's engine, so the bundled `@actual-app/api` version has to match the version of your sync server. The TUI compares both at startup. A mismatch that still loads is shown in the status line, one that stops the budget from loading is reported with both versions on exit. When in doubt, upgrade actual-tui together with the server.
+
 ## Usage
 
 The status line at the bottom shows available keybindings, press `?` to show a detailed listing.
@@ -73,6 +75,7 @@ The seed script bootstraps the server with the given password, creates a budget 
 All settings can live in either the config file or be passed as env vars, the latter win. `XDG_CONFIG_HOME` and `XDG_DATA_HOME` are honored.
 
 Existing options:
+
 - `serverURL`/`ACTUAL_SERVER_URL` - Required
 - `password`/`ACTUAL_PASSWORD` - Required
 - `syncId`/`ACTUAL_SYNC_ID` - Required

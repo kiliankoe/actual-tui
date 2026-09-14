@@ -133,11 +133,15 @@ export function BudgetProvider({ config, onFatal, children }: ProviderProps) {
     let cancelled = false;
     (async () => {
       try {
-        await actual.connect(config);
+        const notice = await actual.connect(config);
         await refresh();
         if (cancelled) return;
         setSync({ status: "idle", lastSyncedAt: new Date() });
         setReady(true);
+        if (notice) {
+          console.warn(notice);
+          notify(notice);
+        }
       } catch (error) {
         if (!cancelled)
           onFatal(error instanceof Error ? error : new Error(String(error)));
@@ -146,7 +150,7 @@ export function BudgetProvider({ config, onFatal, children }: ProviderProps) {
     return () => {
       cancelled = true;
     };
-  }, [config, onFatal, refresh]);
+  }, [config, notify, onFatal, refresh]);
 
   const payeeNames = useMemo(
     () => new Map(payees.map((payee) => [payee.id, payee.name])),

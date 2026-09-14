@@ -6,6 +6,7 @@ import {
   isNumberFormat,
   type AmountFormat,
 } from "./format";
+import { bundledApiVersion, versionNotice, withNotice } from "./version";
 
 // Derived from the API's return types so they track package updates for free.
 export type Account = Awaited<ReturnType<typeof api.getAccounts>>[number];
@@ -25,7 +26,8 @@ export interface NewTransaction {
   cleared: boolean;
 }
 
-export async function connect(config: Config): Promise<void> {
+/** Resolves with a warning when the server runs a different Actual version. */
+export async function connect(config: Config): Promise<string | null> {
   // The engine refuses to start on a missing data directory.
   mkdirSync(config.dataDir, { recursive: true });
   await api.init({
@@ -33,12 +35,25 @@ export async function connect(config: Config): Promise<void> {
     serverURL: config.serverURL,
     password: config.password,
   });
-  await api.downloadBudget(
-    config.syncId,
-    config.encryptionPassword
-      ? { password: config.encryptionPassword }
-      : undefined,
-  );
+  const notice = versionNotice(await serverVersion(), bundledApiVersion());
+  try {
+    await api.downloadBudget(
+      config.syncId,
+      config.encryptionPassword
+        ? { password: config.encryptionPassword }
+        : undefined,
+    );
+  } catch (error) {
+    // A schema mismatch surfaces as a cryptic engine error; name the versions.
+    throw withNotice(error, notice);
+  }
+  return notice;
+}
+
+async function serverVersion(): Promise<string | null> {
+  // An unreachable server fails the download with a clearer error anyway.
+  const result = await api.getServerVersion();
+  return "version" in result ? result.version : null;
 }
 
 export async function disconnect(): Promise<void> {
